@@ -1,0 +1,257 @@
+
+/home/hwaji-28/CS231/comp231-lab04-JoshCardboardBox/part3/part3.axf:     file format elf32-littlearm
+
+
+Disassembly of section .text:
+
+00000000 <__cs3_interrupt_vector>:
+ * Honor Code: I pledge that I have neither given nor received unauthorized aid. */
+	.text
+	.global _start
+
+_start:	
+	mov	r0, #0	//reset
+   0:	e3a00000 	mov	r0, #0
+	
+	
+	//set up clock for incrementing
+	ldr	r10, =0xFFFEC600	//get load
+   4:	e59fa11c 	ldr	r10, [pc, #284]	; 128 <DIVIDE_END+0x4>
+	ldr	r9, =50000000		//value for 0.25s (for timer)
+   8:	e59f911c 	ldr	r9, [pc, #284]	; 12c <DIVIDE_END+0x8>
+	str	r9, [r10]		//write value to load
+   c:	e58a9000 	str	r9, [r10]
+
+		//begin count down
+		ldr	r10, =0xFFFEC608	//get control
+  10:	e59fa118 	ldr	r10, [pc, #280]	; 130 <DIVIDE_END+0xc>
+		ldr	r9, [r10]		//get value of control
+  14:	e59a9000 	ldr	r9, [r10]
+		orr	r9, r9, #3		
+  18:	e3899003 	orr	r9, r9, #3
+		str	r9, [r10]		//set e-bit to 1
+  1c:	e58a9000 	str	r9, [r10]
+
+	
+	//go to LOOP
+	b	LOOP
+  20:	eaffffff 	b	24 <LOOP>
+
+00000024 <LOOP>:
+ */
+
+
+LOOP: 
+	//grab data from that input register so we can process it
+	ldr	r2, =0xFF20005C
+  24:	e59f2108 	ldr	r2, [pc, #264]	; 134 <DIVIDE_END+0x10>
+	ldr	r1, [r2]
+  28:	e5921000 	ldr	r1, [r2]
+
+	// if keys 0-3 are pressed, toggle pause / run
+	cmp	r1, #1
+  2c:	e3510001 	cmp	r1, #1
+	addeq	r12, #1
+  30:	028cc001 	addeq	r12, r12, #1
+	bleq	INPUT_RESET
+  34:	0b00001c 	bleq	ac <INPUT_RESET>
+	
+	cmp	r1, #2
+  38:	e3510002 	cmp	r1, #2
+	addeq	r12, #1
+  3c:	028cc001 	addeq	r12, r12, #1
+	bleq	INPUT_RESET
+  40:	0b000019 	bleq	ac <INPUT_RESET>
+	
+	cmp	r1, #4
+  44:	e3510004 	cmp	r1, #4
+	addeq	r12, #1
+  48:	028cc001 	addeq	r12, r12, #1
+	bleq	INPUT_RESET
+  4c:	0b000016 	bleq	ac <INPUT_RESET>
+	
+	cmp	r1, #8
+  50:	e3510008 	cmp	r1, #8
+	addeq	r12, #1
+  54:	028cc001 	addeq	r12, r12, #1
+	bleq	INPUT_RESET
+  58:	0b000013 	bleq	ac <INPUT_RESET>
+	
+	
+	//toggle r12 (if not 1, set to 0)
+	cmp	r12, #1
+  5c:	e35c0001 	cmp	r12, #1
+	movgt	r12, #0
+  60:	c3a0c000 	movgt	r12, #0
+
+	//toggle pause/run
+	cmp	r12, #0
+  64:	e35c0000 	cmp	r12, #0
+	bne	LOOP	//if 1+, pause. 
+  68:	1affffed 	bne	24 <LOOP>
+		ldrne	r10, =0xFFFEC60C	//then, put in the interrupt bit
+  6c:	159fa0c4 	ldrne	r10, [pc, #196]	; 138 <DIVIDE_END+0x14>
+		movne	r9, #1
+  70:	13a09001 	movne	r9, #1
+		strne	r9, [r10]		//toggle it (set a 1 to it to pause it)	
+  74:	158a9000 	strne	r9, [r10]
+	
+	
+	//make sure numbers are in right range, from 0-99
+	cmp	r0, #0
+  78:	e3500000 	cmp	r0, #0
+	movlt	r0, #0	//if negative, make it 0
+  7c:	b3a00000 	movlt	r0, #0
+	cmp	r0, #99
+  80:	e3500063 	cmp	r0, #99	; 0x63
+	movgt	r0, #0	//if 99+, make it 0
+  84:	c3a00000 	movgt	r0, #0
+		
+	
+	
+	//display (should be AFTER add, to remove appearance of input delay)
+	bl	DISPLAY
+  88:	eb00000a 	bl	b8 <DISPLAY>
+
+0000008c <CLOCK_CHECK>:
+
+
+/* Pause program for 0.25s */
+CLOCK_CHECK:
+	ldr	r10, =0xFFFEC60C	//get interrupt bit
+  8c:	e59fa0a4 	ldr	r10, [pc, #164]	; 138 <DIVIDE_END+0x14>
+	ldr	r9, [r10] 		//get value
+  90:	e59a9000 	ldr	r9, [r10]
+	
+	//if interrupt bit, then reload clock
+	cmp	r9, #1
+  94:	e3590001 	cmp	r9, #1
+	addeq	r0, #1	//increment
+  98:	02800001 	addeq	r0, r0, #1
+	moveq	r9, #1
+  9c:	03a09001 	moveq	r9, #1
+	streq	r9, [r10]	//remove the interrupt bit
+  a0:	058a9000 	streq	r9, [r10]
+		
+	b	LOOP
+  a4:	eaffffde 	b	24 <LOOP>
+
+000000a8 <END>:
+
+
+
+END:	b	END
+  a8:	eafffffe 	b	a8 <END>
+
+000000ac <INPUT_RESET>:
+
+
+
+/* Reset edge capture */
+INPUT_RESET:
+	ldr	r4, =0xffffffff
+  ac:	e3e04000 	mvn	r4, #0
+	str	r4, [r2]	//put new nothing-burger in address (empty it)
+  b0:	e5824000 	str	r4, [r2]
+	bx	lr
+  b4:	e12fff1e 	bx	lr
+
+000000b8 <DISPLAY>:
+
+
+
+/* Function for displaying numbers, plus the bit_codes to put into the address (that's stored in r8). */
+DISPLAY:
+	push	{r0,lr}
+  b8:	e92d4001 	push	{r0, lr}
+
+	ldr	r3, =0xff200020 // base address of hex3-hex0
+  bc:	e59f3078 	ldr	r3, [pc, #120]	; 13c <DIVIDE_END+0x18>
+	mov	r4, #0	//for what we put in address
+  c0:	e3a04000 	mov	r4, #0
+	
+	//fetch 1's and 10's via the DIVIDE function
+	bl	DIVIDE
+  c4:	eb000010 	bl	10c <DIVIDE>
+	mov	r6, r0	//store 1's
+  c8:	e1a06000 	mov	r6, r0
+	mov	r7, r1	//store 10's
+  cc:	e1a07001 	mov	r7, r1
+	
+	
+	mov	r0, r6		//load in 1's
+  d0:	e1a00006 	mov	r0, r6
+	bl	seg7_code 	// returns r0 converted to a bit code in r0
+  d4:	eb000009 	bl	100 <seg7_code>
+	orr	r4, r4, r0
+  d8:	e1844000 	orr	r4, r4, r0
+	
+	mov	r0, r7		//load in 10's
+  dc:	e1a00007 	mov	r0, r7
+	bl	seg7_code 	// returns r0 converted to a bit code in r0
+  e0:	eb000006 	bl	100 <seg7_code>
+	orr	r4, r4, r0, lsl #8
+  e4:	e1844400 	orr	r4, r4, r0, lsl #8
+	
+	//store changes for display
+	str	r4, [r3]
+  e8:	e5834000 	str	r4, [r3]
+
+	//exit function
+	pop	{r0,lr}
+  ec:	e8bd4001 	pop	{r0, lr}
+	bx	lr
+  f0:	e12fff1e 	bx	lr
+
+000000f4 <bit_codes>:
+  f4:	4f5b063f 	.word	0x4f5b063f
+  f8:	077d6d66 	.word	0x077d6d66
+  fc:	0000677f 	.word	0x0000677f
+
+00000100 <seg7_code>:
+		.byte	0b01101101, 0b01111101, 0b00000111, 0b01111111, 0b01100111
+		.skip	2 // pad with 2 bytes to maintain word alignment
+
+
+seg7_code:
+	ldr	r1, =bit_codes
+ 100:	e59f1038 	ldr	r1, [pc, #56]	; 140 <DIVIDE_END+0x1c>
+	ldrb	r0, [r1, r0]
+ 104:	e7d10000 	ldrb	r0, [r1, r0]
+	bx	lr
+ 108:	e12fff1e 	bx	lr
+
+0000010c <DIVIDE>:
+
+
+/* The division subroutine, only for base 10 */
+// Parameter(s): r0		Returns: r0, r1
+DIVIDE:	
+	mov	r1, #0	//reset r1
+ 10c:	e3a01000 	mov	r1, #0
+
+00000110 <DIVIDE_CONT>:
+DIVIDE_CONT:
+	//keep lowering r0 until it's below divisor
+	cmp	r0, #10
+ 110:	e350000a 	cmp	r0, #10
+	blt	DIVIDE_END
+ 114:	ba000002 	blt	124 <DIVIDE_END>
+	sub	r0, #10
+ 118:	e240000a 	sub	r0, r0, #10
+	add	r1, #1
+ 11c:	e2811001 	add	r1, r1, #1
+	b	DIVIDE_CONT
+ 120:	eafffffa 	b	110 <DIVIDE_CONT>
+
+00000124 <DIVIDE_END>:
+DIVIDE_END:
+	bx	lr
+ 124:	e12fff1e 	bx	lr
+ 128:	fffec600 	.word	0xfffec600
+ 12c:	02faf080 	.word	0x02faf080
+ 130:	fffec608 	.word	0xfffec608
+ 134:	ff20005c 	.word	0xff20005c
+ 138:	fffec60c 	.word	0xfffec60c
+ 13c:	ff200020 	.word	0xff200020
+ 140:	000000f4 	.word	0x000000f4

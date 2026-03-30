@@ -1,11 +1,10 @@
-
 /* COMP231 LAB 4, PART 2 - Joshua Hwang
  * Honor Code: I pledge that I have neither given nor received unauthorized aid. */
 	.text
 	.global _start
 
 _start:	
-	mov	r0, #0	//reset
+	mov	r0, #-1	//reset (design wants this to be 0, this is -1 so the lights shows 0 first)
 	b	LOOP
 
 
@@ -16,7 +15,7 @@ _start:
  *	
  *	[r3 - display address]		<r4 - temp/misc.>
  *	DIGITS [r6, r7 - 1's 10's]
- *	TOGGLE SCREEN [r12]
+ *	PAUSE/RUN [r12: 0 run, 1 pause]
  */
 
 
@@ -25,56 +24,54 @@ LOOP:
 	ldr	r2, =0xFF20005C
 	ldr	r1, [r2]
 
-	// if key 0 is pressed, set r0 to 0.
+	// if keys 0-3 are pressed, toggle pause / run
 	cmp	r1, #1
-	moveq	r0, #0
-	bleq	INPUT_RESET
-	// if key 1 is pressed, increment r0
-	cmp	r1, #2
-	addeq	r0, #5
-	bleq	INPUT_RESET
-	// if key 2 is pressed, decrement r0
-	cmp	r1, #4
-	subeq	r0, #5
-	bleq	INPUT_RESET
-	// if key 3 is pressed, display nothing. Not a 0. No lights should be on.
-	cmp	r1, #8
-	addeq	r12, #1	//idea is for it to constantly toggle between 1 and 0
+	addeq	r12, #1
 	bleq	INPUT_RESET
 	
+	cmp	r1, #2
+	addeq	r12, #1
+	bleq	INPUT_RESET
+	
+	cmp	r1, #4
+	addeq	r12, #1
+	bleq	INPUT_RESET
+	
+	cmp	r1, #8
+	addeq	r12, #1
+	bleq	INPUT_RESET
+	
+	
+	//toggle r12 (if not 1, set to 0)
+	cmp	r12, #1
+	movgt	r12, #0
 
+	//toggle pause/run
+	cmp	r12, #0
+	bne	LOOP	//if 1+, pause. Else, go to delay
+
+	
+	add	r0, #1
 	//make sure numbers are in right range, from 0-99
 	cmp	r0, #0
 	movlt	r0, #0	//if negative, make it 0
 	cmp	r0, #99
-	movge	r0, #0	//if 99+, make it 0
-
-	//if r12 is not 1, make it 0
-	cmp	r12, #1
-	movgt	r12, #0
-
-	//if r12 == 1, hide display
-	cmp	r12, #1
-	ldreq	r4, =0xff200020
-	moveq	r3, #0
-	streq	r3, [r4]
-	bleq	INPUT_RESET
-	bleq	CHECK_KEYDOWN
-	//if r12 == 0, don't hide display
-	cmp	r12, #0
-	bleq	DISPLAY
+	movgt	r0, #0	//if 99+, make it 0
+		
 	
-	bl	CHECK_KEYDOWN
-
-	add	r0, #1	//increment
 	
+	//display (should be AFTER add, to remove appearance of input delay)
+	bl	DISPLAY
 
+//pause program for 0.25s
 DO_DELAY:
 	ldr	r4, =200000000	// delay counter
 SUB_LOOP:
+	//if r4 is 0, then go to LOOP_END
 	subs	r4, r4, #1	// subtract one, set status
 	bne	SUB_LOOP	
 	
+	//go back to LOOP
 	b	LOOP
 
 
@@ -89,19 +86,6 @@ INPUT_RESET:
 	str	r4, [r2]	//put new nothing-burger in address (empty it)
 	bx	lr
 	
-
-/* Freeze the program for as long as a key is pressed. 
- * This is so adds/subtracts don't continuously occur (need to release button per +/-) */
-// uses r#: r1
-CHECK_KEYDOWN:
-	//keep checking that r1 for button being continuously pressed
-	ldr	r1, =0xFF200050
-	ldr	r1, [r1]
-
-	//if NOT 0, loop back on itself. else hop off.
-	cmp	r1, #0
-	bne	CHECK_KEYDOWN
-	bx	lr
 
 
 
@@ -169,4 +153,3 @@ DIVIDE_END:
 stack:
 
 .end
-

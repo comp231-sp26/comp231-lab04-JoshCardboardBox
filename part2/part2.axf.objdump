@@ -10,8 +10,8 @@ Disassembly of section .text:
 	.global _start
 
 _start:	
-	mov	r0, #0	//reset
-   0:	e3a00000 	mov	r0, #0
+	mov	r0, #-1	//reset (design wants this to be 0, this is -1 so the lights shows 0 first)
+   0:	e3e00000 	mvn	r0, #0
 	b	LOOP
    4:	eaffffff 	b	8 <LOOP>
 
@@ -22,230 +22,202 @@ _start:
 LOOP: 
 	//grab data from that input register so we can process it
 	ldr	r2, =0xFF20005C
-   8:	e59f2114 	ldr	r2, [pc, #276]	; 124 <DIVIDE_END+0x4>
+   8:	e59f20e8 	ldr	r2, [pc, #232]	; f8 <DIVIDE_END+0x4>
 	ldr	r1, [r2]
    c:	e5921000 	ldr	r1, [r2]
 
-	// if key 0 is pressed, set r0 to 0.
+	// if keys 0-3 are pressed, toggle pause / run
 	cmp	r1, #1
   10:	e3510001 	cmp	r1, #1
-	moveq	r0, #0
-  14:	03a00000 	moveq	r0, #0
+	addeq	r12, #1
+  14:	028cc001 	addeq	r12, r12, #1
 	bleq	INPUT_RESET
-  18:	0b00001d 	bleq	94 <INPUT_RESET>
-	// if key 1 is pressed, increment r0
+  18:	0b000017 	bleq	7c <INPUT_RESET>
+	
 	cmp	r1, #2
   1c:	e3510002 	cmp	r1, #2
-	addeq	r0, #5
-  20:	02800005 	addeq	r0, r0, #5
+	addeq	r12, #1
+  20:	028cc001 	addeq	r12, r12, #1
 	bleq	INPUT_RESET
-  24:	0b00001a 	bleq	94 <INPUT_RESET>
-	// if key 2 is pressed, decrement r0
+  24:	0b000014 	bleq	7c <INPUT_RESET>
+	
 	cmp	r1, #4
   28:	e3510004 	cmp	r1, #4
-	subeq	r0, #5
-  2c:	02400005 	subeq	r0, r0, #5
+	addeq	r12, #1
+  2c:	028cc001 	addeq	r12, r12, #1
 	bleq	INPUT_RESET
-  30:	0b000017 	bleq	94 <INPUT_RESET>
-	// if key 3 is pressed, display nothing. Not a 0. No lights should be on.
+  30:	0b000011 	bleq	7c <INPUT_RESET>
+	
 	cmp	r1, #8
   34:	e3510008 	cmp	r1, #8
-	addeq	r12, #1	//idea is for it to constantly toggle between 1 and 0
+	addeq	r12, #1
   38:	028cc001 	addeq	r12, r12, #1
 	bleq	INPUT_RESET
-  3c:	0b000014 	bleq	94 <INPUT_RESET>
+  3c:	0b00000e 	bleq	7c <INPUT_RESET>
 	
+	
+	//toggle r12 (if not 1, set to 0)
+	cmp	r12, #1
+  40:	e35c0001 	cmp	r12, #1
+	movgt	r12, #0
+  44:	c3a0c000 	movgt	r12, #0
 
+	//toggle pause/run
+	cmp	r12, #0
+  48:	e35c0000 	cmp	r12, #0
+	bne	LOOP	//if 1+, pause. Else, go to delay
+  4c:	1affffed 	bne	8 <LOOP>
+
+	
+	add	r0, #1
+  50:	e2800001 	add	r0, r0, #1
 	//make sure numbers are in right range, from 0-99
 	cmp	r0, #0
-  40:	e3500000 	cmp	r0, #0
+  54:	e3500000 	cmp	r0, #0
 	movlt	r0, #0	//if negative, make it 0
-  44:	b3a00000 	movlt	r0, #0
+  58:	b3a00000 	movlt	r0, #0
 	cmp	r0, #99
-  48:	e3500063 	cmp	r0, #99	; 0x63
-	movge	r0, #0	//if 99+, make it 0
-  4c:	a3a00000 	movge	r0, #0
-
-	//if r12 is not 1, make it 0
-	cmp	r12, #1
-  50:	e35c0001 	cmp	r12, #1
-	movgt	r12, #0
-  54:	c3a0c000 	movgt	r12, #0
-
-	//if r12 == 1, hide display
-	cmp	r12, #1
-  58:	e35c0001 	cmp	r12, #1
-	ldreq	r4, =0xff200020
-  5c:	059f40c4 	ldreq	r4, [pc, #196]	; 128 <DIVIDE_END+0x8>
-	moveq	r3, #0
-  60:	03a03000 	moveq	r3, #0
-	streq	r3, [r4]
-  64:	05843000 	streq	r3, [r4]
-	bleq	INPUT_RESET
-  68:	0b000009 	bleq	94 <INPUT_RESET>
-	bleq	CHECK_KEYDOWN
-  6c:	0b00000b 	bleq	a0 <CHECK_KEYDOWN>
-	//if r12 == 0, don't hide display
-	cmp	r12, #0
-  70:	e35c0000 	cmp	r12, #0
-	bleq	DISPLAY
-  74:	0b00000e 	bleq	b4 <DISPLAY>
+  5c:	e3500063 	cmp	r0, #99	; 0x63
+	movgt	r0, #0	//if 99+, make it 0
+  60:	c3a00000 	movgt	r0, #0
+		
 	
-	bl	CHECK_KEYDOWN
-  78:	eb000008 	bl	a0 <CHECK_KEYDOWN>
-
-	add	r0, #1	//increment
-  7c:	e2800001 	add	r0, r0, #1
-
-00000080 <DO_DELAY>:
 	
+	//display (should be AFTER add, to remove appearance of input delay)
+	bl	DISPLAY
+  64:	eb000007 	bl	88 <DISPLAY>
 
+00000068 <DO_DELAY>:
+
+//pause program for 0.25s
 DO_DELAY:
 	ldr	r4, =200000000	// delay counter
-  80:	e59f40a4 	ldr	r4, [pc, #164]	; 12c <DIVIDE_END+0xc>
+  68:	e59f408c 	ldr	r4, [pc, #140]	; fc <DIVIDE_END+0x8>
 
-00000084 <SUB_LOOP>:
+0000006c <SUB_LOOP>:
 SUB_LOOP:
+	//if r4 is 0, then go to LOOP_END
 	subs	r4, r4, #1	// subtract one, set status
-  84:	e2544001 	subs	r4, r4, #1
+  6c:	e2544001 	subs	r4, r4, #1
 	bne	SUB_LOOP	
-  88:	1afffffd 	bne	84 <SUB_LOOP>
+  70:	1afffffd 	bne	6c <SUB_LOOP>
 	
+	//go back to LOOP
 	b	LOOP
-  8c:	eaffffdd 	b	8 <LOOP>
+  74:	eaffffe3 	b	8 <LOOP>
 
-00000090 <END>:
+00000078 <END>:
 
 
 END:	b	END
-  90:	eafffffe 	b	90 <END>
+  78:	eafffffe 	b	78 <END>
 
-00000094 <INPUT_RESET>:
+0000007c <INPUT_RESET>:
 
 
 
 /* Reset edge capture */
 INPUT_RESET:
 	ldr	r4, =0xffffffff
-  94:	e3e04000 	mvn	r4, #0
+  7c:	e3e04000 	mvn	r4, #0
 	str	r4, [r2]	//put new nothing-burger in address (empty it)
-  98:	e5824000 	str	r4, [r2]
+  80:	e5824000 	str	r4, [r2]
 	bx	lr
-  9c:	e12fff1e 	bx	lr
+  84:	e12fff1e 	bx	lr
 
-000000a0 <CHECK_KEYDOWN>:
-/* Freeze the program for as long as a key is pressed. 
- * This is so adds/subtracts don't continuously occur (need to release button per +/-) */
-// uses r#: r1
-CHECK_KEYDOWN:
-	//keep checking that r1 for button being continuously pressed
-	ldr	r1, =0xFF200050
-  a0:	e59f1088 	ldr	r1, [pc, #136]	; 130 <DIVIDE_END+0x10>
-	ldr	r1, [r1]
-  a4:	e5911000 	ldr	r1, [r1]
-
-	//if NOT 0, loop back on itself. else hop off.
-	cmp	r1, #0
-  a8:	e3510000 	cmp	r1, #0
-	bne	CHECK_KEYDOWN
-  ac:	1afffffb 	bne	a0 <CHECK_KEYDOWN>
-	bx	lr
-  b0:	e12fff1e 	bx	lr
-
-000000b4 <DISPLAY>:
+00000088 <DISPLAY>:
 
 
 
 /* Function for displaying numbers, plus the bit_codes to put into the address (that's stored in r8). */
 DISPLAY:
 	push	{r0,lr}
-  b4:	e92d4001 	push	{r0, lr}
+  88:	e92d4001 	push	{r0, lr}
 
 	ldr	r3, =0xff200020 // base address of hex3-hex0
-  b8:	e59f3068 	ldr	r3, [pc, #104]	; 128 <DIVIDE_END+0x8>
+  8c:	e59f306c 	ldr	r3, [pc, #108]	; 100 <DIVIDE_END+0xc>
 	mov	r4, #0	//for what we put in address
-  bc:	e3a04000 	mov	r4, #0
+  90:	e3a04000 	mov	r4, #0
 	
 	//fetch 1's and 10's via the DIVIDE function
 	bl	DIVIDE
-  c0:	eb000010 	bl	108 <DIVIDE>
+  94:	eb000010 	bl	dc <DIVIDE>
 	mov	r6, r0	//store 1's
-  c4:	e1a06000 	mov	r6, r0
+  98:	e1a06000 	mov	r6, r0
 	mov	r7, r1	//store 10's
-  c8:	e1a07001 	mov	r7, r1
+  9c:	e1a07001 	mov	r7, r1
 	
 	
 	mov	r0, r6		//load in 1's
-  cc:	e1a00006 	mov	r0, r6
+  a0:	e1a00006 	mov	r0, r6
 	bl	seg7_code 	// returns r0 converted to a bit code in r0
-  d0:	eb000009 	bl	fc <seg7_code>
+  a4:	eb000009 	bl	d0 <seg7_code>
 	orr	r4, r4, r0
-  d4:	e1844000 	orr	r4, r4, r0
+  a8:	e1844000 	orr	r4, r4, r0
 	
 	mov	r0, r7		//load in 10's
-  d8:	e1a00007 	mov	r0, r7
+  ac:	e1a00007 	mov	r0, r7
 	bl	seg7_code 	// returns r0 converted to a bit code in r0
-  dc:	eb000006 	bl	fc <seg7_code>
+  b0:	eb000006 	bl	d0 <seg7_code>
 	orr	r4, r4, r0, lsl #8
-  e0:	e1844400 	orr	r4, r4, r0, lsl #8
+  b4:	e1844400 	orr	r4, r4, r0, lsl #8
 	
 	//store changes for display
 	str	r4, [r3]
-  e4:	e5834000 	str	r4, [r3]
+  b8:	e5834000 	str	r4, [r3]
 
 	//exit function
 	pop	{r0,lr}
-  e8:	e8bd4001 	pop	{r0, lr}
+  bc:	e8bd4001 	pop	{r0, lr}
 	bx	lr
-  ec:	e12fff1e 	bx	lr
+  c0:	e12fff1e 	bx	lr
 
-000000f0 <bit_codes>:
-  f0:	4f5b063f 	.word	0x4f5b063f
-  f4:	077d6d66 	.word	0x077d6d66
-  f8:	0000677f 	.word	0x0000677f
+000000c4 <bit_codes>:
+  c4:	4f5b063f 	.word	0x4f5b063f
+  c8:	077d6d66 	.word	0x077d6d66
+  cc:	0000677f 	.word	0x0000677f
 
-000000fc <seg7_code>:
+000000d0 <seg7_code>:
 		.byte	0b01101101, 0b01111101, 0b00000111, 0b01111111, 0b01100111
 		.skip	2 // pad with 2 bytes to maintain word alignment
 
 
 seg7_code:
 	ldr	r1, =bit_codes
-  fc:	e59f1030 	ldr	r1, [pc, #48]	; 134 <DIVIDE_END+0x14>
+  d0:	e59f102c 	ldr	r1, [pc, #44]	; 104 <DIVIDE_END+0x10>
 	ldrb	r0, [r1, r0]
- 100:	e7d10000 	ldrb	r0, [r1, r0]
+  d4:	e7d10000 	ldrb	r0, [r1, r0]
 	bx	lr
- 104:	e12fff1e 	bx	lr
+  d8:	e12fff1e 	bx	lr
 
-00000108 <DIVIDE>:
+000000dc <DIVIDE>:
 
 
 /* The division subroutine, only for base 10 */
 // Parameter(s): r0		Returns: r0, r1
 DIVIDE:	
 	mov	r1, #0	//reset r1
- 108:	e3a01000 	mov	r1, #0
+  dc:	e3a01000 	mov	r1, #0
 
-0000010c <DIVIDE_CONT>:
+000000e0 <DIVIDE_CONT>:
 DIVIDE_CONT:
 	//keep lowering r0 until it's below divisor
 	cmp	r0, #10
- 10c:	e350000a 	cmp	r0, #10
+  e0:	e350000a 	cmp	r0, #10
 	blt	DIVIDE_END
- 110:	ba000002 	blt	120 <DIVIDE_END>
+  e4:	ba000002 	blt	f4 <DIVIDE_END>
 	sub	r0, #10
- 114:	e240000a 	sub	r0, r0, #10
+  e8:	e240000a 	sub	r0, r0, #10
 	add	r1, #1
- 118:	e2811001 	add	r1, r1, #1
+  ec:	e2811001 	add	r1, r1, #1
 	b	DIVIDE_CONT
- 11c:	eafffffa 	b	10c <DIVIDE_CONT>
+  f0:	eafffffa 	b	e0 <DIVIDE_CONT>
 
-00000120 <DIVIDE_END>:
+000000f4 <DIVIDE_END>:
 DIVIDE_END:
 	bx	lr
- 120:	e12fff1e 	bx	lr
- 124:	ff20005c 	.word	0xff20005c
- 128:	ff200020 	.word	0xff200020
- 12c:	0bebc200 	.word	0x0bebc200
- 130:	ff200050 	.word	0xff200050
- 134:	000000f0 	.word	0x000000f0
+  f4:	e12fff1e 	bx	lr
+  f8:	ff20005c 	.word	0xff20005c
+  fc:	0bebc200 	.word	0x0bebc200
+ 100:	ff200020 	.word	0xff200020
+ 104:	000000c4 	.word	0x000000c4
