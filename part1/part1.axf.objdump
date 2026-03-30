@@ -1,0 +1,200 @@
+
+/home/hwaji-28/CS231/comp231-lab04-JoshCardboardBox/part1/part1.axf:     file format elf32-littlearm
+
+
+Disassembly of section .text:
+
+00000000 <__cs3_interrupt_vector>:
+ * Honor Code: I pledge that I have neither given nor received unauthorized aid. */
+	.text
+	.global _start
+
+_start:	
+	b	LOOP
+   0:	eaffffff 	b	4 <LOOP>
+
+00000004 <LOOP>:
+
+/* ðeez loops are cool. */
+// uses r#: r1, r0
+LOOP: 
+	//grab data from that input register so we can process it
+	ldr	r1, =0xFF200050
+   4:	e59f10d4 	ldr	r1, [pc, #212]	; e0 <seg7_code+0xc>
+	ldr	r1, [r1]
+   8:	e5911000 	ldr	r1, [r1]
+	and	r0, #0xF	//note: it'll reset automatically when button's released, so u don't need to AND it, per say.
+   c:	e200000f 	and	r0, r0, #15
+
+	
+	// if key 0 is pressed, set r0 to 0.
+	cmp	r1, #1
+  10:	e3510001 	cmp	r1, #1
+	bleq	COND_RESET
+  14:	0b000007 	bleq	38 <COND_RESET>
+	// if key 1 is pressed, increment r0
+	cmp	r1, #2
+  18:	e3510002 	cmp	r1, #2
+	bleq	COND_ADD
+  1c:	0b00000b 	bleq	50 <COND_ADD>
+	// if key 2 is pressed, decrement r0
+	cmp	r1, #4
+  20:	e3510004 	cmp	r1, #4
+	bleq	COND_SUBTRACT
+  24:	0b00000f 	bleq	68 <COND_SUBTRACT>
+	// if key 3 is pressed, display nothing. Not a 0. No lights should be on.
+	cmp	r1, #8
+  28:	e3510008 	cmp	r1, #8
+	bleq	COND_NOTHING
+  2c:	0b000014 	bleq	84 <COND_NOTHING>
+	
+	b	LOOP
+  30:	eafffff3 	b	4 <LOOP>
+
+00000034 <END>:
+
+
+END:	b	END
+  34:	eafffffe 	b	34 <END>
+
+00000038 <COND_RESET>:
+
+/* Condition-Input Functions */
+// uses r#: r1, r0, r7, r8
+COND_RESET:
+	//first, push lr so we can go back to LOOP later
+	push	{lr}
+  38:	e52de004 	push	{lr}		; (str lr, [sp, #-4]!)
+	
+	mov	r0, #0
+  3c:	e3a00000 	mov	r0, #0
+	bl	DISPLAY
+  40:	eb00001a 	bl	b0 <DISPLAY>
+	bl	CHECK_KEYDOWN
+  44:	eb000014 	bl	9c <CHECK_KEYDOWN>
+	
+	//go back to loop
+	pop	{lr}
+  48:	e49de004 	pop	{lr}		; (ldr lr, [sp], #4)
+	bx	lr
+  4c:	e12fff1e 	bx	lr
+
+00000050 <COND_ADD>:
+COND_ADD:
+	//first, push lr so we can go back to LOOP later
+	push	{lr}
+  50:	e52de004 	push	{lr}		; (str lr, [sp, #-4]!)
+	
+	add	r0, #1
+  54:	e2800001 	add	r0, r0, #1
+	bl	DISPLAY
+  58:	eb000014 	bl	b0 <DISPLAY>
+	bl	CHECK_KEYDOWN
+  5c:	eb00000e 	bl	9c <CHECK_KEYDOWN>
+	
+	//go back to loop
+	pop	{lr}
+  60:	e49de004 	pop	{lr}		; (ldr lr, [sp], #4)
+	bx	lr
+  64:	e12fff1e 	bx	lr
+
+00000068 <COND_SUBTRACT>:
+COND_SUBTRACT:
+	//first, push lr so we can go back to LOOP later
+	push	{lr}
+  68:	e52de004 	push	{lr}		; (str lr, [sp, #-4]!)
+	
+	//before subtracting, check if it's going into negatives
+	cmp	r0, #0
+  6c:	e3500000 	cmp	r0, #0
+	subgt	r0, #1
+  70:	c2400001 	subgt	r0, r0, #1
+	blgt	DISPLAY
+  74:	cb00000d 	blgt	b0 <DISPLAY>
+	
+	bl	CHECK_KEYDOWN
+  78:	eb000007 	bl	9c <CHECK_KEYDOWN>
+	
+	//go back to loop
+	pop	{lr}
+  7c:	e49de004 	pop	{lr}		; (ldr lr, [sp], #4)
+	bx	lr
+  80:	e12fff1e 	bx	lr
+
+00000084 <COND_NOTHING>:
+COND_NOTHING:
+	//first, push lr so we can go back to LOOP later
+	push	{lr}
+  84:	e52de004 	push	{lr}		; (str lr, [sp, #-4]!)
+	
+	ldr	r8, =0xff200020
+  88:	e59f8054 	ldr	r8, [pc, #84]	; e4 <seg7_code+0x10>
+	mov	r7, #0
+  8c:	e3a07000 	mov	r7, #0
+	str	r7, [r8]
+  90:	e5887000 	str	r7, [r8]
+
+	//go back to loop
+	pop	{lr}
+  94:	e49de004 	pop	{lr}		; (ldr lr, [sp], #4)
+	bx	lr
+  98:	e12fff1e 	bx	lr
+
+0000009c <CHECK_KEYDOWN>:
+/* Freeze the program for as long as a key is pressed. 
+ * This is so adds/subtracts don't continuously occur (need to release button per +/-) */
+// uses r#: r1
+CHECK_KEYDOWN:
+	//keep checking that r1 for button being continuously pressed
+	ldr	r1, =0xFF200050
+  9c:	e59f103c 	ldr	r1, [pc, #60]	; e0 <seg7_code+0xc>
+	ldr	r1, [r1]
+  a0:	e5911000 	ldr	r1, [r1]
+
+	//if NOT 0, loop back on itself. else hop off.
+	cmp	r1, #0
+  a4:	e3510000 	cmp	r1, #0
+	bne	CHECK_KEYDOWN
+  a8:	1afffffb 	bne	9c <CHECK_KEYDOWN>
+	bx	lr
+  ac:	e12fff1e 	bx	lr
+
+000000b0 <DISPLAY>:
+
+
+/* Function for displaying numbers, plus the bit_codes to put into the address (that's stored in r8). */
+// uses r#: r8, r0
+DISPLAY:
+	ldr	r8, =0xff200020 // base address of hex3-hex0
+  b0:	e59f802c 	ldr	r8, [pc, #44]	; e4 <seg7_code+0x10>
+	push	{r0,lr}
+  b4:	e92d4001 	push	{r0, lr}
+	bl	seg7_code // returns r0 converted to a bit code in r0
+  b8:	eb000005 	bl	d4 <seg7_code>
+	str	r0, [r8]
+  bc:	e5880000 	str	r0, [r8]
+	pop	{r0,lr}
+  c0:	e8bd4001 	pop	{r0, lr}
+	bx	lr
+  c4:	e12fff1e 	bx	lr
+
+000000c8 <bit_codes>:
+  c8:	4f5b063f 	.word	0x4f5b063f
+  cc:	077d6d66 	.word	0x077d6d66
+  d0:	0000677f 	.word	0x0000677f
+
+000000d4 <seg7_code>:
+		.byte	0b01101101, 0b01111101, 0b00000111, 0b01111111, 0b01100111
+		.skip	2 // pad with 2 bytes to maintain word alignment
+
+
+seg7_code:
+	ldr	r1, =bit_codes
+  d4:	e59f100c 	ldr	r1, [pc, #12]	; e8 <seg7_code+0x14>
+	ldrb	r0, [r1, r0]
+  d8:	e7d10000 	ldrb	r0, [r1, r0]
+	bx	lr
+  dc:	e12fff1e 	bx	lr
+  e0:	ff200050 	.word	0xff200050
+  e4:	ff200020 	.word	0xff200020
+  e8:	000000c8 	.word	0x000000c8
